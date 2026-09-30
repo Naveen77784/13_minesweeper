@@ -7,6 +7,10 @@ DEFAULT_MINES = 6
 
 class Board:
     def __init__(self, rows=DEFAULT_ROWS, cols=DEFAULT_COLS, mines=DEFAULT_MINES):
+        if rows < 1 or cols < 1:
+            raise ValueError("Board dimensions must be positive.")
+        if mines < 0 or mines >= rows * cols:
+            raise ValueError("Mine count must be non-negative and leave at least one safe cell.")
         self.rows = rows
         self.cols = cols
         self.mine_total = mines
@@ -22,18 +26,22 @@ class Board:
         return 0 <= r < self.rows and 0 <= c < self.cols
 
     def neighbors(self, r, c):
+        if not self.in_bounds(r, c):
+            return
         for dr in (-1, 0, 1):
             for dc in (-1, 0, 1):
                 if dr == 0 and dc == 0:
                     continue
                 nr, nc = r + dr, c + dc
-                if 0 <= nr <= self.rows and 0 <= nc <= self.cols:
+                if self.in_bounds(nr, nc):
                     yield nr, nc
 
     def adjacent_mines(self, r, c):
         return sum(pos in self.mines for pos in self.neighbors(r, c))
 
     def reveal(self, start):
+        if not self.in_bounds(*start):
+            return False
         stack = [start]
         hit_mine = False
         while stack:
@@ -50,7 +58,7 @@ class Board:
         return hit_mine
 
     def toggle_flag(self, pos):
-        if pos in self.revealed:
+        if not self.in_bounds(*pos) or pos in self.revealed:
             return False
         if pos in self.flags:
             self.flags.remove(pos)
@@ -59,4 +67,7 @@ class Board:
         return True
 
     def won(self):
-        return len(self.revealed) == self.rows * self.cols - self.mine_total
+        return (
+            len(self.revealed) == self.rows * self.cols - self.mine_total
+            and self.revealed.isdisjoint(self.mines)
+        )

@@ -1,9 +1,28 @@
 from board import Board
 
 
+DIFFICULTIES = {
+    "easy": (6, 6, 6),
+    "medium": (9, 9, 15),
+    "hard": (12, 12, 30),
+}
+
+
 class Minesweeper:
     def __init__(self):
         self.board = Board()
+        self.difficulty = "easy"
+
+    def select_difficulty(self):
+        while True:
+            choice = input("Difficulty (easy/medium/hard) [easy]: ").strip().lower()
+            if not choice:
+                choice = "easy"
+            if choice in DIFFICULTIES:
+                self.difficulty = choice
+                self.board = Board(*DIFFICULTIES[choice])
+                return
+            print("Choose easy, medium, or hard.")
 
     def display(self, reveal_mines=False):
         b = self.board
@@ -27,6 +46,8 @@ class Minesweeper:
 
     def run(self):
         print("Minesweeper")
+        self.select_difficulty()
+        print(f"Difficulty: {self.difficulty.title()}")
         print("Commands: r row col | f row col | q")
         while True:
             self.display()
@@ -47,13 +68,29 @@ class Minesweeper:
                 continue
 
             if parts[0] == "f":
-                self.board.toggle_flag((r, c))
+                pos = (r, c)
+                was_flagged = pos in self.board.flags
+                if not self.board.toggle_flag(pos):
+                    print("Cannot flag that cell.")
+                else:
+                    print("Flag removed." if was_flagged else "Flag placed.")
                 continue
 
-            if self.board.reveal((r, c)):
+            pos = (r, c)
+            if pos in self.board.flags:
+                print("That cell is flagged; unflag it before revealing.")
+                continue
+            previous_revealed = len(self.board.revealed)
+            if self.board.reveal(pos):
                 self.display(reveal_mines=True)
                 print("BOOM! You hit a mine.")
                 return
+            revealed_count = len(self.board.revealed) - previous_revealed
+            if revealed_count:
+                noun = "cell" if revealed_count == 1 else "cells"
+                print(f"Revealed {revealed_count} safe {noun}.")
+            else:
+                print("That cell was already revealed.")
             if self.board.won():
                 self.display()
                 print("You cleared the board!")
